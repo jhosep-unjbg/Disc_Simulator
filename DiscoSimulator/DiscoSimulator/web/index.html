@@ -2,102 +2,296 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte Grafico - Simulador de Discos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de Discos — Panel de Analisis</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; background:#0f1115; color:#e8e8e8; margin:0; padding:32px; }
-  h1 { font-size:22px; margin-bottom:4px; }
-  p.sub { color:#9aa0a8; margin-top:0; }
-  .card { background:#1a1d24; border-radius:12px; padding:20px; margin-bottom:24px; box-shadow:0 4px 12px rgba(0,0,0,.3); }
-  select { background:#0f1115; color:#e8e8e8; border:1px solid #333; border-radius:6px; padding:6px 10px; }
-  table { width:100%; border-collapse:collapse; margin-top:12px; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #2a2e37; font-size:14px; }
-  th { color:#9aa0a8; font-weight:600; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:6px; }
-  .hdd { background:#3a2a2a; color:#ff8a8a; }
-  .ssd { background:#2a3a2e; color:#8affa0; }
-  .nvme { background:#2a2f3a; color:#8ab4ff; }
-  #vacio { color:#9aa0a8; }
+  :root {
+    --bg: #0b0d12; --panel: #12151c; --panel2: #171b24; --borde: #232838;
+    --texto: #e8eaf0; --sub: #8890a0; --hdd: #ff6b6b; --ssd: #33d17a; --nvme: #4f9dff;
+    --acento: #ffb454;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background:var(--bg); color:var(--texto); margin:0; padding:0; }
+  .contenedor { max-width:1100px; margin:0 auto; padding:32px 24px 60px; }
+  header h1 { font-size:24px; margin:0 0 4px; letter-spacing:-0.3px; }
+  header p { color:var(--sub); margin:0 0 28px; font-size:14px; }
+  header code { color:var(--acento); }
+
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; margin-bottom:28px; }
+  .kpi { background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:16px 18px; }
+  .kpi .valor { font-size:26px; font-weight:700; }
+  .kpi .etiqueta { color:var(--sub); font-size:12px; margin-top:2px; }
+  .kpi.hdd .valor { color:var(--hdd); } .kpi.ssd .valor { color:var(--ssd); } .kpi.nvme .valor { color:var(--nvme); }
+
+  .card { background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:22px; margin-bottom:22px; }
+  .card h2 { font-size:16px; margin:0 0 4px; }
+  .card p.desc { color:var(--sub); font-size:13px; margin:0 0 16px; }
+
+  .fila { display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:14px; }
+  .campo { display:flex; flex-direction:column; gap:4px; }
+  label { font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  input { background:var(--bg); color:var(--texto); border:1px solid var(--borde); border-radius:6px; padding:8px 10px; width:150px; font-size:14px; }
+  input:focus { outline:2px solid var(--nvme); outline-offset:1px; }
+  button { background:var(--nvme); color:#04101f; border:none; border-radius:6px; padding:9px 18px; cursor:pointer; font-weight:700; font-size:13px; }
+  button:hover { filter:brightness(1.1); }
+  button.secundario { background:var(--panel2); color:var(--texto); border:1px solid var(--borde); }
+
+  table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--borde); }
+  th { color:var(--sub); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .hdd { color:var(--hdd); } .ssd { color:var(--ssd); } .nvme { color:var(--nvme); }
+
+  .estado { font-size:13px; margin-top:6px; min-height:18px; }
+  .estado.ok { color:var(--ssd); } .estado.error { color:var(--hdd); }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:820px) { .grid2 { grid-template-columns:1fr; } }
+
+  .insight { border-left:3px solid var(--acento); background:var(--panel2); padding:10px 14px; border-radius:0 8px 8px 0; font-size:13px; color:var(--texto); margin-top:12px; }
+  .tecnologia { border-left:3px solid var(--borde); padding-left:12px; margin-bottom:14px; }
 </style>
 </head>
 <body>
-  <h1>Reporte de Rendimiento: HDD vs SSD SATA vs NVMe M.2</h1>
-  <p class="sub">Datos generados por el backend en C++ (datos.js). Seleccione un escenario para comparar.</p>
+<div class="contenedor">
+  <header>
+    <h1>Panel de Analisis — Rendimiento de Almacenamiento</h1>
+    <p>Backend en C++ conectado en vivo en <code id="origen"></code> · HDD vs SSD SATA vs NVMe M.2</p>
+  </header>
+
+  <div class="kpis" id="kpis">
+    <div class="kpi hdd"><div class="valor" id="kpiHdd">150 MB/s</div><div class="etiqueta">HDD · 15.00 ms latencia</div></div>
+    <div class="kpi ssd"><div class="valor" id="kpiSsd">550 MB/s</div><div class="etiqueta">SSD SATA · 0.10 ms latencia</div></div>
+    <div class="kpi nvme"><div class="valor" id="kpiNvme">7000 MB/s</div><div class="etiqueta">NVMe M.2 · 0.02 ms latencia</div></div>
+  </div>
 
   <div class="card">
-    <label for="selectorEscenario">Escenario simulado: </label>
-    <select id="selectorEscenario"></select>
-    <div id="vacio" style="display:none;">
-      No se encontraron datos. Ejecute el simulador en C++, use la opcion
-      "Exportar resultados" y recargue esta pagina.
+    <h2>Simulacion puntual</h2>
+    <p class="desc">Ejecuta un escenario especifico contra el backend y compara el tiempo resultante por tecnologia.</p>
+    <div class="fila">
+      <div class="campo"><label>Archivo unico (MB)</label><input type="number" id="tamanoUnico" value="40000" min="0.001"></div>
+      <button onclick="simularArchivoUnico()">Simular archivo unico</button>
+      <div class="campo"><label>MB por archivo</label><input type="number" id="tamanoFragmento" value="1" min="0.001"></div>
+      <div class="campo"><label>Cantidad de archivos</label><input type="number" id="cantidadArchivos" value="15000" min="1"></div>
+      <button onclick="simularFragmentado()">Simular fragmentado</button>
     </div>
-    <canvas id="grafico" height="110"></canvas>
+    <div id="estadoSimulacion" class="estado"></div>
+    <canvas id="graficoPuntual" height="90"></canvas>
+    <table id="tablaResultados"><thead><tr><th>Tecnologia</th><th>Tiempo (s)</th></tr></thead><tbody></tbody></table>
+    <div id="insightPuntual" class="insight" style="display:none;"></div>
   </div>
 
   <div class="card">
-    <h3>Detalle numerico</h3>
-    <table id="tablaResultados">
-      <thead><tr><th>Tecnologia</th><th>Tiempo (s)</th><th>Aceleracion vs HDD</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <h2>Analisis comparativo: Tiempo vs Tamano de archivo</h2>
+    <p class="desc">Curva X-Y (escala logaritmica) generada por el backend para un rango de tamanos. Muestra donde domina la latencia (curvas planas a la izquierda) y donde domina el ancho de banda (pendiente recta a la derecha).</p>
+    <div class="fila">
+      <div class="campo"><label>Tamano minimo (MB)</label><input type="number" id="curvaMin" value="0.01" min="0.001"></div>
+      <div class="campo"><label>Tamano maximo (MB)</label><input type="number" id="curvaMax" value="1000000" min="1"></div>
+      <button onclick="cargarCurvaTamano()">Generar curva</button>
+    </div>
+    <canvas id="graficoCurvaTamano" height="100"></canvas>
+    <div id="insightTamano" class="insight" style="display:none;"></div>
   </div>
 
-  <script src="datos.js" onerror="window.__sinDatos=true"></script>
-  <script>
-    const datos = (typeof resultadosSimulacion !== 'undefined') ? resultadosSimulacion : [];
-    const selector = document.getElementById('selectorEscenario');
-    const vacio = document.getElementById('vacio');
+  <div class="card">
+    <h2>Analisis comparativo: Tiempo vs Cantidad de archivos fragmentados</h2>
+    <p class="desc">Curva X-Y (escala logaritmica) a tamano de archivo fijo. Expone el costo de la latencia repetida y la penalizacion mecanica adicional del HDD frente a SSD/NVMe.</p>
+    <div class="fila">
+      <div class="campo"><label>Tamano por archivo (MB)</label><input type="number" id="fragTamano" value="1" min="0.001"></div>
+      <div class="campo"><label>Min. archivos</label><input type="number" id="fragMin" value="1" min="1"></div>
+      <div class="campo"><label>Max. archivos</label><input type="number" id="fragMax" value="100000" min="2"></div>
+      <button onclick="cargarCurvaFragmentacion()">Generar curva</button>
+    </div>
+    <canvas id="graficoCurvaFrag" height="100"></canvas>
+    <div id="insightFrag" class="insight" style="display:none;"></div>
+  </div>
 
-    if (datos.length === 0) {
-      vacio.style.display = 'block';
-    } else {
-      const escenarios = [...new Set(datos.map(d => d.escenario))];
-      escenarios.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e; opt.textContent = e;
-        selector.appendChild(opt);
-      });
+  <div class="grid2">
+    <div class="card">
+      <div class="fila" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="margin:0;">Historial de sesion</h2>
+        <div><button class="secundario" onclick="cargarHistorial()">Actualizar</button> <button class="secundario" onclick="exportarResultados()">Exportar</button></div>
+      </div>
+      <div id="estadoExportar" class="estado"></div>
+      <table id="tablaHistorial"><thead><tr><th>Escenario</th><th>Tec.</th><th>Tiempo (s)</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card" id="descripciones">
+      <h2>Ficha tecnica</h2>
+    </div>
+  </div>
+</div>
 
-      const colorPorDisco = (nombre) => {
-        if (nombre.includes('HDD')) return '#ff8a8a';
-        if (nombre.includes('SATA')) return '#8affa0';
-        return '#8ab4ff';
-      };
+<script>
+  const API = window.location.origin;
+  document.getElementById('origen').textContent = API;
+  let chartPuntual, chartTamano, chartFrag;
 
-      let chart;
-      function renderEscenario(escenario) {
-        const filas = datos.filter(d => d.escenario === escenario);
-        const labels = filas.map(f => f.disco);
-        const valores = filas.map(f => f.tiempoSegundos);
-        const colores = filas.map(f => colorPorDisco(f.disco));
+  const COLOR = { hdd: '#ff6b6b', ssd: '#33d17a', nvme: '#4f9dff' };
+  function clave(nombre) { return nombre.includes('HDD') ? 'hdd' : nombre.includes('SATA') ? 'ssd' : 'nvme'; }
+  function colorDe(nombre) { return COLOR[clave(nombre)]; }
 
-        if (chart) chart.destroy();
-        chart = new Chart(document.getElementById('grafico'), {
-          type: 'bar',
-          data: { labels, datasets: [{ label: 'Tiempo (s)', data: valores, backgroundColor: colores }] },
-          options: {
-            plugins: { legend: { display: false } },
-            scales: {
-              y: { beginAtZero: true, ticks: { color: '#9aa0a8' }, grid: { color: '#2a2e37' } },
-              x: { ticks: { color: '#9aa0a8' }, grid: { display: false } }
-            }
+  // ---------- Simulacion puntual ----------
+  function pintarPuntual(datos) {
+    const labels = datos.resultados.map(r => r.disco);
+    const valores = datos.resultados.map(r => r.tiempoSegundos);
+    const colores = datos.resultados.map(r => colorDe(r.disco));
+    if (chartPuntual) chartPuntual.destroy();
+    chartPuntual = new Chart(document.getElementById('graficoPuntual'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Tiempo (s)', data: valores, backgroundColor: colores, borderRadius: 4 }] },
+      options: { plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero:true, ticks:{color:'#8890a0'}, grid:{color:'#232838'} }, x: { ticks:{color:'#8890a0'}, grid:{display:false} } } }
+    });
+    const tbody = document.querySelector('#tablaResultados tbody');
+    tbody.innerHTML = '';
+    datos.resultados.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="${clave(r.disco)}">${r.disco}</td><td>${r.tiempoSegundos.toFixed(6)}</td>`;
+      tbody.appendChild(tr);
+    });
+    const insight = document.getElementById('insightPuntual');
+    insight.style.display = 'block';
+    insight.textContent = `NVMe completo la tarea ${datos.factorAceleracion.toFixed(1)}x mas rapido que el HDD clasico.`;
+  }
+
+  async function simularArchivoUnico() {
+    const tamanoMB = parseFloat(document.getElementById('tamanoUnico').value);
+    const estado = document.getElementById('estadoSimulacion');
+    estado.textContent = 'Consultando al backend...'; estado.className = 'estado';
+    try {
+      const res = await fetch(`${API}/api/simular/archivo-unico`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ tamanoMB }) });
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error);
+      pintarPuntual(datos); estado.textContent = 'Simulado en el backend.'; estado.className = 'estado ok';
+      cargarHistorial();
+    } catch (e) { estado.textContent = 'Error: ' + e.message; estado.className = 'estado error'; }
+  }
+
+  async function simularFragmentado() {
+    const tamanoPorArchivoMB = parseFloat(document.getElementById('tamanoFragmento').value);
+    const cantidadArchivos = parseInt(document.getElementById('cantidadArchivos').value, 10);
+    const estado = document.getElementById('estadoSimulacion');
+    estado.textContent = 'Consultando al backend...'; estado.className = 'estado';
+    try {
+      const res = await fetch(`${API}/api/simular/fragmentado`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ tamanoPorArchivoMB, cantidadArchivos }) });
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error);
+      pintarPuntual(datos); estado.textContent = 'Simulado en el backend.'; estado.className = 'estado ok';
+      cargarHistorial();
+    } catch (e) { estado.textContent = 'Error: ' + e.message; estado.className = 'estado error'; }
+  }
+
+  // ---------- Curva Tiempo vs Tamano (X-Y) ----------
+  async function cargarCurvaTamano() {
+    const min = document.getElementById('curvaMin').value;
+    const max = document.getElementById('curvaMax').value;
+    try {
+      const res = await fetch(`${API}/api/analisis/curva-tamano?min=${min}&max=${max}&puntos=30`);
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error);
+
+      const datasets = datos.series.map(s => ({
+        label: s.disco, data: s.puntos, borderColor: colorDe(s.disco), backgroundColor: colorDe(s.disco),
+        borderWidth: 2, pointRadius: 0, tension: 0.15
+      }));
+      if (chartTamano) chartTamano.destroy();
+      chartTamano = new Chart(document.getElementById('graficoCurvaTamano'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+          parsing: false,
+          plugins: { legend: { labels: { color:'#e8eaf0' } } },
+          scales: {
+            x: { type:'logarithmic', title:{display:true,text:datos.eje_x,color:'#8890a0'}, ticks:{color:'#8890a0'}, grid:{color:'#232838'} },
+            y: { type:'logarithmic', title:{display:true,text:datos.eje_y,color:'#8890a0'}, ticks:{color:'#8890a0'}, grid:{color:'#232838'} }
           }
-        });
+        }
+      });
+      const insight = document.getElementById('insightTamano');
+      insight.style.display = 'block';
+      insight.textContent = 'A la izquierda (archivos pequenos) las curvas se separan por la latencia; a la derecha (archivos grandes) la separacion la marca el ancho de banda de cada tecnologia.';
+    } catch (e) { console.error(e); }
+  }
 
-        const tHDD = filas.find(f => f.disco.includes('HDD'))?.tiempoSegundos;
-        const tbody = document.querySelector('#tablaResultados tbody');
-        tbody.innerHTML = '';
-        filas.forEach(f => {
-          const tr = document.createElement('tr');
-          const aceleracion = tHDD ? (tHDD / f.tiempoSegundos).toFixed(1) + 'x' : '-';
-          tr.innerHTML = `<td>${f.disco}</td><td>${f.tiempoSegundos.toFixed(6)}</td><td>${aceleracion}</td>`;
-          tbody.appendChild(tr);
-        });
-      }
+  // ---------- Curva Tiempo vs Cantidad de archivos (X-Y) ----------
+  async function cargarCurvaFragmentacion() {
+    const tamanoArchivo = document.getElementById('fragTamano').value;
+    const min = document.getElementById('fragMin').value;
+    const max = document.getElementById('fragMax').value;
+    try {
+      const res = await fetch(`${API}/api/analisis/curva-fragmentacion?tamanoArchivo=${tamanoArchivo}&min=${min}&max=${max}&puntos=30`);
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error);
 
-      selector.addEventListener('change', () => renderEscenario(selector.value));
-      renderEscenario(escenarios[0]);
-    }
-  </script>
+      const datasets = datos.series.map(s => ({
+        label: s.disco, data: s.puntos, borderColor: colorDe(s.disco), backgroundColor: colorDe(s.disco),
+        borderWidth: 2, pointRadius: 0, tension: 0.15
+      }));
+      if (chartFrag) chartFrag.destroy();
+      chartFrag = new Chart(document.getElementById('graficoCurvaFrag'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+          parsing: false,
+          plugins: { legend: { labels: { color:'#e8eaf0' } } },
+          scales: {
+            x: { type:'logarithmic', title:{display:true,text:datos.eje_x,color:'#8890a0'}, ticks:{color:'#8890a0'}, grid:{color:'#232838'} },
+            y: { type:'logarithmic', title:{display:true,text:datos.eje_y,color:'#8890a0'}, ticks:{color:'#8890a0'}, grid:{color:'#232838'} }
+          }
+        }
+      });
+      const insight = document.getElementById('insightFrag');
+      insight.style.display = 'block';
+      insight.textContent = 'La pendiente del HDD es mas pronunciada: cada archivo adicional paga latencia mecanica completa, mientras SSD y NVMe la absorben casi sin costo.';
+    } catch (e) { console.error(e); }
+  }
+
+  // ---------- Historial / exportacion / fichas tecnicas ----------
+  async function cargarHistorial() {
+    try {
+      const res = await fetch(`${API}/api/historial`);
+      const historial = await res.json();
+      const tbody = document.querySelector('#tablaHistorial tbody');
+      tbody.innerHTML = '';
+      historial.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.escenario}</td><td class="${clave(r.disco)}">${r.disco}</td><td>${r.tiempoSegundos.toFixed(6)}</td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) { /* silencioso */ }
+  }
+
+  async function exportarResultados() {
+    const estado = document.getElementById('estadoExportar');
+    try {
+      const res = await fetch(`${API}/api/exportar`, { method:'POST' });
+      const datos = await res.json();
+      if (!res.ok) throw new Error(datos.error);
+      estado.textContent = datos.mensaje; estado.className = 'estado ok';
+    } catch (e) { estado.textContent = 'Error: ' + e.message; estado.className = 'estado error'; }
+  }
+
+  async function cargarDescripciones() {
+    try {
+      const res = await fetch(`${API}/api/discos`);
+      const discos = await res.json();
+      const cont = document.getElementById('descripciones');
+      discos.forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'tecnologia';
+        div.innerHTML = `<strong class="${clave(d.nombre)}">${d.nombre}</strong>
+          <div style="color:var(--sub); font-size:12px; margin:2px 0;">${d.velocidadMBs} MB/s · ${d.latenciaMs} ms latencia</div>
+          <div style="font-size:13px;">${d.descripcion}</div>`;
+        cont.appendChild(div);
+      });
+    } catch (e) { /* silencioso */ }
+  }
+
+  // Carga inicial
+  cargarDescripciones();
+  cargarHistorial();
+  cargarCurvaTamano();
+  cargarCurvaFragmentacion();
+</script>
 </body>
 </html>

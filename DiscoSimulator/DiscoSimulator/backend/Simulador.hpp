@@ -4,6 +4,12 @@
 #include <string>
 #include "Disco.hpp"
 
+// Limites razonables para evitar entradas absurdas.
+namespace LimitesSimulacion {
+    constexpr double TAMANO_MAX_MB = 100000000.0;   // 100 TB
+    constexpr long CANTIDAD_MAX_ARCHIVOS = 50000000L;
+}
+
 // Representa un resultado individual: en qué escenario, con qué disco,
 // y el tiempo total obtenido. Es la estructura de datos que viaja desde
 // el backend (cálculo) hacia el frontend (consola y reporte web).

@@ -1,18 +1,23 @@
 #include "Simulador.hpp"
-#include "HDD.hpp"
-#include "SSDSata.hpp"
-#include "NVMe.hpp"
+#include "DiscoFactory.hpp"
+#include "Exceptions.hpp"
+#include "Logger.hpp"
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 Simulador::Simulador() {
-    discos.push_back(std::make_unique<HDD>());
-    discos.push_back(std::make_unique<SSDSata>());
-    discos.push_back(std::make_unique<NVMe>());
+    discos = DiscoFactory::crearConjuntoEstandar();
+    Logger::log(Logger::Nivel::INFO, "Simulador inicializado con " + std::to_string(discos.size()) + " tecnologias.");
 }
 
 std::vector<ResultadoSimulacion> Simulador::simularArchivoUnico(double tamanoMB) {
+    if (tamanoMB <= 0.0) {
+        throw EntradaInvalidaException("El tamano del archivo debe ser mayor que cero.");
+    }
+    if (tamanoMB > LimitesSimulacion::TAMANO_MAX_MB) {
+        throw EntradaInvalidaException("El tamano del archivo excede el limite permitido (100 TB).");
+    }
+
     std::vector<ResultadoSimulacion> resultados;
     std::ostringstream etiqueta;
     etiqueta << "Archivo unico (" << tamanoMB << " MB)";
@@ -23,10 +28,21 @@ std::vector<ResultadoSimulacion> Simulador::simularArchivoUnico(double tamanoMB)
         resultados.push_back(r);
         historial.push_back(r);
     }
+    Logger::log(Logger::Nivel::INFO, "Simulacion archivo unico ejecutada: " + etiqueta.str());
     return resultados;
 }
 
 std::vector<ResultadoSimulacion> Simulador::simularFragmentado(double tamanoPorArchivoMB, long cantidadArchivos) {
+    if (tamanoPorArchivoMB <= 0.0) {
+        throw EntradaInvalidaException("El tamano por archivo debe ser mayor que cero.");
+    }
+    if (cantidadArchivos <= 0) {
+        throw EntradaInvalidaException("La cantidad de archivos debe ser mayor que cero.");
+    }
+    if (cantidadArchivos > LimitesSimulacion::CANTIDAD_MAX_ARCHIVOS) {
+        throw EntradaInvalidaException("La cantidad de archivos excede el limite permitido (50,000,000).");
+    }
+
     std::vector<ResultadoSimulacion> resultados;
     std::ostringstream etiqueta;
     etiqueta << cantidadArchivos << " archivos x " << tamanoPorArchivoMB << " MB (fragmentado)";
@@ -37,6 +53,7 @@ std::vector<ResultadoSimulacion> Simulador::simularFragmentado(double tamanoPorA
         resultados.push_back(r);
         historial.push_back(r);
     }
+    Logger::log(Logger::Nivel::INFO, "Simulacion fragmentada ejecutada: " + etiqueta.str());
     return resultados;
 }
 
@@ -54,17 +71,28 @@ double Simulador::calcularFactorAceleracion(const std::vector<ResultadoSimulacio
 }
 
 void Simulador::exportarCSV(const std::string& ruta) const {
+    if (historial.empty()) {
+        throw EntradaInvalidaException("No hay resultados en el historial para exportar.");
+    }
     std::ofstream out(ruta);
-    if (!out.is_open()) throw std::runtime_error("No se pudo crear el archivo CSV: " + ruta);
+    if (!out.is_open()) {
+        throw ArchivoException("No se pudo crear el archivo CSV: " + ruta);
+    }
     out << "Escenario,Disco,TiempoSegundos\n";
     for (const auto& r : historial) {
         out << "\"" << r.escenario << "\"," << r.disco << "," << r.tiempoSegundos << "\n";
     }
+    Logger::log(Logger::Nivel::INFO, "Historial exportado a CSV: " + ruta);
 }
 
 void Simulador::exportarJS(const std::string& ruta) const {
+    if (historial.empty()) {
+        throw EntradaInvalidaException("No hay resultados en el historial para exportar.");
+    }
     std::ofstream out(ruta);
-    if (!out.is_open()) throw std::runtime_error("No se pudo crear el archivo JS: " + ruta);
+    if (!out.is_open()) {
+        throw ArchivoException("No se pudo crear el archivo JS: " + ruta);
+    }
     out << "// Generado automaticamente por el backend en C++\n";
     out << "const resultadosSimulacion = [\n";
     for (size_t i = 0; i < historial.size(); ++i) {
@@ -74,4 +102,5 @@ void Simulador::exportarJS(const std::string& ruta) const {
         out << (i + 1 < historial.size() ? ",\n" : "\n");
     }
     out << "];\n";
+    Logger::log(Logger::Nivel::INFO, "Historial exportado a JS: " + ruta);
 }
