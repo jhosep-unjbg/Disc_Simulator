@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Grafico - Simulador de Discos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background:#0f1115; color:#e8e8e8; margin:0; padding:32px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  p.sub { color:#9aa0a8; margin-top:0; }
+  .card { background:#1a1d24; border-radius:12px; padding:20px; margin-bottom:24px; box-shadow:0 4px 12px rgba(0,0,0,.3); }
+  select { background:#0f1115; color:#e8e8e8; border:1px solid #333; border-radius:6px; padding:6px 10px; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #2a2e37; font-size:14px; }
+  th { color:#9aa0a8; font-weight:600; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:6px; }
+  .hdd { background:#3a2a2a; color:#ff8a8a; }
+  .ssd { background:#2a3a2e; color:#8affa0; }
+  .nvme { background:#2a2f3a; color:#8ab4ff; }
+  #vacio { color:#9aa0a8; }
+</style>
+</head>
+<body>
+  <h1>Reporte de Rendimiento: HDD vs SSD SATA vs NVMe M.2</h1>
+  <p class="sub">Datos generados por el backend en C++ (datos.js). Seleccione un escenario para comparar.</p>
+
+  <div class="card">
+    <label for="selectorEscenario">Escenario simulado: </label>
+    <select id="selectorEscenario"></select>
+    <div id="vacio" style="display:none;">
+      No se encontraron datos. Ejecute el simulador en C++, use la opcion
+      "Exportar resultados" y recargue esta pagina.
+    </div>
+    <canvas id="grafico" height="110"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>Detalle numerico</h3>
+    <table id="tablaResultados">
+      <thead><tr><th>Tecnologia</th><th>Tiempo (s)</th><th>Aceleracion vs HDD</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="datos.js" onerror="window.__sinDatos=true"></script>
+  <script>
+    const datos = (typeof resultadosSimulacion !== 'undefined') ? resultadosSimulacion : [];
+    const selector = document.getElementById('selectorEscenario');
+    const vacio = document.getElementById('vacio');
+
+    if (datos.length === 0) {
+      vacio.style.display = 'block';
+    } else {
+      const escenarios = [...new Set(datos.map(d => d.escenario))];
+      escenarios.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e; opt.textContent = e;
+        selector.appendChild(opt);
+      });
+
+      const colorPorDisco = (nombre) => {
+        if (nombre.includes('HDD')) return '#ff8a8a';
+        if (nombre.includes('SATA')) return '#8affa0';
+        return '#8ab4ff';
+      };
+
+      let chart;
+      function renderEscenario(escenario) {
+        const filas = datos.filter(d => d.escenario === escenario);
+        const labels = filas.map(f => f.disco);
+        const valores = filas.map(f => f.tiempoSegundos);
+        const colores = filas.map(f => colorPorDisco(f.disco));
+
+        if (chart) chart.destroy();
+        chart = new Chart(document.getElementById('grafico'), {
+          type: 'bar',
+          data: { labels, datasets: [{ label: 'Tiempo (s)', data: valores, backgroundColor: colores }] },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { color: '#9aa0a8' }, grid: { color: '#2a2e37' } },
+              x: { ticks: { color: '#9aa0a8' }, grid: { display: false } }
+            }
+          }
+        });
+
+        const tHDD = filas.find(f => f.disco.includes('HDD'))?.tiempoSegundos;
+        const tbody = document.querySelector('#tablaResultados tbody');
+        tbody.innerHTML = '';
+        filas.forEach(f => {
+          const tr = document.createElement('tr');
+          const aceleracion = tHDD ? (tHDD / f.tiempoSegundos).toFixed(1) + 'x' : '-';
+          tr.innerHTML = `<td>${f.disco}</td><td>${f.tiempoSegundos.toFixed(6)}</td><td>${aceleracion}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      selector.addEventListener('change', () => renderEscenario(selector.value));
+      renderEscenario(escenarios[0]);
+    }
+  </script>
+</body>
+</html>
