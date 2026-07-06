@@ -6,7 +6,7 @@
 /// reflejan en std::cerr para visibilidad inmediata en consola.
 class Logger {
 public:
-    enum class Nivel { INFO, ADVERTENCIA, ERROR };
+    enum class Nivel { INFO, ADVERTENCIA, FALLA };
 
     static void log(Nivel nivel, const std::string& mensaje);
 

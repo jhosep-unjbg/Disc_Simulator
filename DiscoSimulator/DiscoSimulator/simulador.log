@@ -1,0 +1,9 @@
+[2026-07-06 12:36:01] [INFO] Simulador inicializado con 3 tecnologias.
+[2026-07-06 12:36:01] [INFO] Servidor iniciado en el puerto 8080
+[2026-07-06 12:40:26] [INFO] Simulador inicializado con 3 tecnologias.
+[2026-07-06 12:40:26] [INFO] Servidor iniciado en el puerto 8080
+[2026-07-06 12:45:06] [INFO] Simulacion archivo unico ejecutada: Archivo unico (700 MB)
+[2026-07-06 12:45:11] [INFO] Simulacion fragmentada ejecutada: 15000 archivos x 1 MB (fragmentado)
+[2026-07-06 12:45:24] [INFO] Simulacion fragmentada ejecutada: 15000 archivos x 1 MB (fragmentado)
+[2026-07-06 12:45:26] [INFO] Simulacion archivo unico ejecutada: Archivo unico (1.2e+06 MB)
+[2026-07-06 12:45:32] [INFO] Simulacion fragmentada ejecutada: 150 archivos x 1 MB (fragmentado)

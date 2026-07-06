@@ -6,6 +6,12 @@
 #include <cstring>
 
 #if defined(_WIN32)
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
     #include <winsock2.h>
     #include <ws2tcpip.h>
     #pragma comment(lib, "ws2_32.lib")
@@ -108,7 +114,7 @@ void HttpServer::iniciar() {
 
     socket_t servidorFd = socket(AF_INET, SOCK_STREAM, 0);
     if (servidorFd == INVALID_SOCKET) {
-        Logger::log(Logger::Nivel::ERROR, "No se pudo crear el socket del servidor.");
+        Logger::log(Logger::Nivel::FALLA, "No se pudo crear el socket del servidor.");
         std::cerr << "Error: no se pudo crear el socket.\n";
         return;
     }
@@ -128,7 +134,7 @@ void HttpServer::iniciar() {
     if (bind(servidorFd, reinterpret_cast<sockaddr*>(&direccion), sizeof(direccion)) == SOCKET_ERROR) {
         std::cerr << "Error: no se pudo enlazar el puerto " << puerto
                   << ". ¿Ya hay otro proceso usandolo?\n";
-        Logger::log(Logger::Nivel::ERROR, "No se pudo enlazar el puerto " + std::to_string(puerto));
+        Logger::log(Logger::Nivel::FALLA, "No se pudo enlazar el puerto " + std::to_string(puerto));
         CERRAR_SOCKET(servidorFd);
         return;
     }

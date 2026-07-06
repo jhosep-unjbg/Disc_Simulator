@@ -159,7 +159,7 @@ void ConsoleUI::flujoExportar() const {
         std::cout << Color::AMARILLO << e.what() << Color::RESET << "\n";
     } catch (const ArchivoException& e) {
         std::cout << Color::ROJO << "Error al exportar: " << e.what() << Color::RESET << "\n";
-        Logger::log(Logger::Nivel::ERROR, e.what());
+        Logger::log(Logger::Nivel::FALLA, e.what());
     }
 }
 
@@ -187,7 +187,7 @@ void ConsoleUI::ejecutar() {
             // Red de seguridad: cualquier excepcion del dominio no debe
             // tumbar el programa; se informa al usuario y se continua.
             std::cout << Color::ROJO << "Ocurrio un error: " << e.what() << Color::RESET << "\n";
-            Logger::log(Logger::Nivel::ERROR, e.what());
+            Logger::log(Logger::Nivel::FALLA, e.what());
         }
     }
 }

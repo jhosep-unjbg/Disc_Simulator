@@ -37,7 +37,7 @@ Makefile                   -> Build alternativo con g++ directo
 
 ## Compilar
 
-### Opcion A: CMake (recomendado en Windows)
+### Opcion A: CMake 
 
 ```bash
 mkdir build
@@ -122,7 +122,7 @@ accedido (Σ), mientras que la transferencia se acumula sobre el tamaño
 total. El HDD ademas incorpora una penalizacion mecanica adicional del
 10%, modelando el reposicionamiento fisico repetido del cabezal.
 
-## Decisiones de diseño (nivel profesional)
+## Decisiones de diseño 
 
 - **Arquitectura cliente-servidor real**: el backend en C++ (`HttpServer`)
   expone una API JSON consumida dinamicamente por el frontend web via
@@ -141,3 +141,18 @@ total. El HDD ademas incorpora una penalizacion mecanica adicional del
   polimorfismo, la fabrica y el manejo de errores.
 - **Separacion estricta backend/frontend**: `Simulador` no sabe nada de
   HTTP ni de consola; se reutiliza identico en ambos modos de ejecucion.
+### Resumen de Componentes y Capas
+| Capa | Componente | Descripción / Responsabilidad |
+| :--- | :--- | :--- |
+| **Núcleo / Hardware** | `Disco.hpp` (Base)<br>`HDD`, `SSDSata`, `NVMe` | Define la interfaz polimórfica y aplica las ecuaciones de rendimiento específicas de cada tecnología. |
+| **Lógica de Negocio** | `Simulador.hpp`<br>`DiscoFactory.hpp` | Controla el flujo de las simulaciones, mantiene el historial de la sesión y centraliza la creación de discos mediante patrones de diseño. |
+| **Infraestructura** | `HttpServer.hpp`<br>`JsonUtil.hpp`<br>`Logger.hpp`<br>`Exceptions.hpp` | Levanta sockets de red nativos (multiplataforma), procesa payloads en texto plano, gestiona logs con marcas de tiempo y propaga errores tipificados. |
+| **Interfaces (UI)** | `ConsoleUI.hpp` (CLI)<br>`index.html` (Web) | Canales de interacción con el usuario. Consumen la lógica del simulador mediante menús ANSI o peticiones asíncronas (`fetch`). |
+
+### Matriz de Decisiones Técnicas de Arquitectura
+| Criterio de Diseño | Solución Implementada | Justificación Computacional / Académica |
+| :--- | :--- | :--- |
+| **Portabilidad de Red** | Código condicional (`#ifdef _WIN32`) | Soporta Winsock en Windows (`-lws2_32`) y sockets POSIX (BSD) en Linux/Mac de forma transparente. |
+| **Extensibilidad** | Patrón *Factory Method* | Cumple el Principio Abierto/Cerrado (SOLID). Agregar nuevos discos no altera la lógica del simulador. |
+| **Desacoplamiento** | Separación Backend/Frontend | El dominio de la aplicación (`Simulador`) procesa datos puros, permitiendo intercambiar la consola y la web sin efectos secundarios. |
+| **Consistencia** | Jerarquía de excepciones propia | Permite traducir errores del núcleo directamente en respuestas formateadas de consola o códigos de estado HTTP semánticos. |

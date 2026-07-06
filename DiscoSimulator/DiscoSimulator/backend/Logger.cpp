@@ -22,7 +22,7 @@ std::string Logger::nivelToString(Nivel nivel) {
     switch (nivel) {
         case Nivel::INFO: return "INFO";
         case Nivel::ADVERTENCIA: return "ADVERTENCIA";
-        case Nivel::ERROR: return "ERROR";
+        case Nivel::FALLA: return "ERROR";
     }
     return "DESCONOCIDO";
 }
@@ -33,7 +33,7 @@ void Logger::log(Nivel nivel, const std::string& mensaje) {
     if (out.is_open()) {
         out << linea << "\n";
     }
-    if (nivel == Nivel::ERROR) {
+    if (nivel == Nivel::FALLA) {
         std::cerr << linea << "\n";
     }
 }
